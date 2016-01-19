@@ -241,6 +241,7 @@ static struct pll_freq_tbl apcs_c1_pll_freq[] = {
 	F_APCS_PLL(1094400000, 57, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1113600000, 58, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1190400000, 62, 0x0, 0x1, 0x0, 0x0, 0x0),
+	F_APCS_PLL(1209600000, 63, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1248000000, 65, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1267200000, 66, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1344000000, 70, 0x0, 0x1, 0x0, 0x0, 0x0),
@@ -589,7 +590,7 @@ static struct clk_freq_tbl ftbl_gcc_venus0_vcodec0_clk[] = {
 static struct clk_freq_tbl ftbl_gcc_venus0_vcodec0_clk_8937[] = {
 	F( 166150000,          gpll6,  6.5,    0,     0),
 	F( 240000000,          gpll6,  4.5,    0,     0),
-	F( 308571428,          gpll6,  3.5,    0,     0),
+	F( 308570000,          gpll6,  3.5,    0,     0),
 	F( 320000000,          gpll0,  2.5,    0,     0),
 	F( 360000000,          gpll6,    3,    0,     0),
 	F_END
@@ -597,7 +598,8 @@ static struct clk_freq_tbl ftbl_gcc_venus0_vcodec0_clk_8937[] = {
 
 static struct clk_freq_tbl ftbl_gcc_venus0_vcodec0_clk_gold[] = {
 	F( 160000000,          gpll0,    5,    0,     0),
-	F( 200000000,          gpll0,    5,    0,     0),
+	F( 200000000,          gpll0,    4,    0,     0),
+	F( 270000000,          gpll6,    4,    0,     0),
 	F( 308570000,          gpll6,  3.5,    0,     0),
 	F( 329140000,          gpll4,  3.5,    0,     0),
 	F( 360000000,          gpll6,    3,    0,     0),
@@ -746,11 +748,12 @@ static struct clk_freq_tbl ftbl_gcc_oxili_gfx3d_clk_gold[] = {
 	F_SLEW( 228570000, FIXED_CLK_SRC, gpll0,	3.5,	0,	0),
 	F_SLEW( 240000000, FIXED_CLK_SRC, gpll6_aux,	4.5,	0,	0),
 	F_SLEW( 266670000, FIXED_CLK_SRC, gpll0,	3,	0,	0),
+	F_SLEW( 270000000, FIXED_CLK_SRC, gpll6_aux,	4,	0,	0),
 	F_SLEW( 320000000, FIXED_CLK_SRC, gpll0,	2.5,	0,	0),
 	F_SLEW( 400000000, FIXED_CLK_SRC, gpll0,	2,	0,	0),
-	F_SLEW( 465000000, 930000000,	  gpll3,	1,	0,	0),
-	F_SLEW( 500000000, 1000000000,	  gpll3,	1,	0,	0),
-	F_SLEW( 550000000, 1100000000,	  gpll3,	1,	0,	0),
+	F_SLEW( 484800000, 969600000,	  gpll3,	1,	0,	0),
+	F_SLEW( 523200000, 1046400000,	  gpll3,	1,	0,	0),
+	F_SLEW( 598000000, 1196000000,	  gpll3,	1,	0,	0),
 	F_END
 };
 
@@ -915,7 +918,7 @@ static struct clk_freq_tbl ftbl_gcc_blsp1_2_uart1_2_apps_clk[] = {
 	F( 56000000,	gpll0,	1,	7,	100),
 	F( 58982400,	gpll0,	1,	1152,	15625),
 	F( 60000000,	gpll0,	1,	3,	40),
-	F( 64000000,	gpll0, 12,	1,	 2),
+	F( 64000000,	gpll0,  1,	2,	25),
 	F_END
 };
 
@@ -4018,9 +4021,9 @@ static void override_for_gold(void)
 		NOM_PLUS, 329140000, HIGH, 360000000);
 	OVERRIDE_FTABLE(vfe1, ftbl_gcc_camss_vfe0_1_clk, gold);
 	OVERRIDE_FTABLE(vcodec0, ftbl_gcc_venus0_vcodec0_clk, gold);
-	OVERRIDE_FMAX4(vcodec0,
-		LOWER, 200000000, LOW, 270000000, NOMINAL, 329140000,
-		HIGH, 360000000);
+	OVERRIDE_FMAX5(vcodec0,
+		LOWER, 200000000, LOW, 270000000, NOMINAL, 308570000,
+		NOM_PLUS, 329140000, HIGH, 360000000);
 	OVERRIDE_FMAX4(cpp,
 		LOWER, 160000000, LOW, 266670000, NOMINAL, 320000000,
 		NOM_PLUS, 360000000);
@@ -4031,8 +4034,8 @@ static void override_for_gold(void)
 	/* Frequency Table same as 8937 */
 	OVERRIDE_FTABLE(jpeg0, ftbl_gcc_camss_jpeg0_clk, 8937);
 	OVERRIDE_FMAX5(gfx3d,
-		LOWER, 240000000, LOW, 320000000, NOMINAL, 465000000,
-		NOM_PLUS, 500000000, HIGH, 598000000);
+		LOWER, 270000000, LOW, 400000000, NOMINAL, 484800000,
+		NOM_PLUS, 532200000, HIGH, 598000000);
 	OVERRIDE_FTABLE(gfx3d, ftbl_gcc_oxili_gfx3d_clk, gold);
 	OVERRIDE_FMAX1(cci, LOWER, 37500000);
 
@@ -4066,7 +4069,8 @@ static void override_for_8937(void)
 {
 	gpll3_clk_src.c.rate = 900000000;
 	gpll3_clk_src.vco_tbl = p_vco_8937;
-	gpll3_clk_src.num_vco = ARRAY_SIZE(p_vco_8937),
+	gpll3_clk_src.num_vco = ARRAY_SIZE(p_vco_8937);
+	OVERRIDE_FMAX2(gpll3, LOW, 800000000, NOMINAL, 1066000000);
 
 	OVERRIDE_FMAX1(cci, LOWER, 37500000);
 	OVERRIDE_FMAX3(csi0,

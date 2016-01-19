@@ -6640,6 +6640,8 @@ static void ufshcd_tune_unipro_params(struct ufs_hba *hba)
 
 	if (hba->dev_quirks & UFS_DEVICE_QUIRK_HOST_PA_TACTIVATE)
 		ufshcd_quirk_tune_host_pa_tactivate(hba);
+
+	ufshcd_vops_apply_dev_quirks(hba);
 }
 
 static void ufshcd_clear_dbg_ufs_stats(struct ufs_hba *hba)
@@ -7052,13 +7054,10 @@ static int ufshcd_ioctl(struct scsi_device *dev, int cmd, void __user *buffer)
 				buffer);
 		pm_runtime_put_sync(hba->dev);
 		break;
-	case UFS_IOCTL_BLKROSET:
-		err = -ENOIOCTLCMD;
-		break;
 	default:
-		err = -EINVAL;
-		dev_err(hba->dev, "%s: Illegal ufs-IOCTL cmd %d\n", __func__,
-				cmd);
+		err = -ENOIOCTLCMD;
+		dev_dbg(hba->dev, "%s: Unsupported ioctl cmd %d\n", __func__,
+			cmd);
 		break;
 	}
 

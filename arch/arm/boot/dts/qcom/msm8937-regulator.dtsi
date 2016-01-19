@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -370,7 +370,7 @@
 		qcom,cpr-timer-cons-up = <0>;
 		qcom,cpr-timer-cons-down = <2>;
 		qcom,cpr-irq-line = <0>;
-		qcom,cpr-step-quotient = <16>;
+		qcom,cpr-step-quotient = <10>;
 		qcom,cpr-up-threshold = <2>;
 		qcom,cpr-down-threshold = <4>;
 		qcom,cpr-idle-clocks = <15>;
@@ -401,8 +401,19 @@
 				<4 1344000000>,
 				<5 1401000000>;
 		qcom,speed-bin-fuse-sel = <37 34 3 0>;
-		qcom,cpr-quot-adjust-scaling-factor-max = <0 1400 1400>;
+		qcom,cpr-speed-bin-max-corners =
+					<0 0 1 2 5>;
 		qcom,cpr-fuse-revision = <69 39 3 0>;
+		qcom,cpr-quot-adjust-scaling-factor-max = <0 1400 1400>;
+		qcom,cpr-voltage-scaling-factor-max = <0 2000 2000>;
+		qcom,cpr-scaled-init-voltage-as-ceiling;
+		qcom,cpr-fuse-version-map =
+			<0	(-1)	1	(-1)	(-1)	(-1)>,
+			<(-1)	(-1)	(-1)	(-1)	(-1)	(-1)>;
+		qcom,cpr-quotient-adjustment =
+			<(-20)	(-40)	(-20)>,
+			<0	0	0>;
+		qcom,cpr-enable;
 	};
 
 	eldo2_pm8937: eldo2 {
@@ -413,4 +424,13 @@
 		gpio = <&pm8937_gpios 7 0>;
 		regulator-always-on;
 	};
+
+	adv_vreg: adv_vreg {
+		compatible = "regulator-fixed";
+		regulator-name = "adv_vreg";
+		startup-delay-us = <400>;
+		enable-avtive-high;
+		gpio = <&pm8937_gpios 8 0>;
+	};
+
 };

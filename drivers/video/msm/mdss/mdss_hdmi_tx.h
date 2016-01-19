@@ -17,6 +17,8 @@
 #include "mdss_hdmi_util.h"
 #include "mdss_cec_core.h"
 
+#define MAX_SWITCH_NAME_SIZE        5
+
 enum hdmi_tx_io_type {
 	HDMI_TX_CORE_IO,
 	HDMI_TX_QFPROM_IO,
@@ -173,6 +175,7 @@ struct hdmi_tx_ctrl {
 	atomic_t audio_ack_pending;
 	bool hdcp14_sw_keys;
 	bool auth_state;
+	bool custom_edid;
 	u32 enc_lvl;
 
 	u8 spd_vendor_name[9];
@@ -194,6 +197,8 @@ struct hdmi_tx_ctrl {
 
 	struct cec_ops hdmi_cec_ops;
 	struct cec_cbs hdmi_cec_cbs;
+
+	char disp_switch_name[MAX_SWITCH_NAME_SIZE];
 };
 
 #endif /* __MDSS_HDMI_TX_H__ */

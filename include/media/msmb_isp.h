@@ -162,6 +162,14 @@ struct msm_vfe_fetch_engine_cfg {
 	uint32_t buf_stride;
 };
 
+enum msm_vfe_camif_output_format {
+	CAMIF_QCOM_RAW,
+	CAMIF_MIPI_RAW,
+	CAMIF_PLAIN_8,
+	CAMIF_PLAIN_16,
+	CAMIF_MAX_FORMAT,
+};
+
 /*
  * Camif output general configuration
  */
@@ -175,6 +183,7 @@ struct msm_vfe_camif_subsample_cfg {
 	uint32_t last_line;
 	uint32_t first_pixel;
 	uint32_t last_pixel;
+	enum msm_vfe_camif_output_format output_format;
 };
 
 /*
@@ -559,7 +568,10 @@ enum msm_isp_event_mask_index {
 	ISP_EVENT_MASK_INDEX_BUF_DIVERT			= 6,
 	ISP_EVENT_MASK_INDEX_COMP_STATS_NOTIFY		= 7,
 	ISP_EVENT_MASK_INDEX_MASK_FE_READ_DONE		= 8,
-	ISP_EVENT_MASK_INDEX_BUF_DONE			= 9
+	ISP_EVENT_MASK_INDEX_BUF_DONE			= 9,
+	ISP_EVENT_MASK_INDEX_REG_UPDATE_MISSING		= 10,
+	ISP_EVENT_MASK_INDEX_PING_PONG_MISMATCH		= 11,
+	ISP_EVENT_MASK_INDEX_BUF_FATAL_ERROR		= 12,
 };
 
 
@@ -595,6 +607,15 @@ enum msm_isp_event_mask_index {
 #define ISP_EVENT_SUBS_MASK_BUF_DONE \
 			(1 << ISP_EVENT_MASK_INDEX_BUF_DONE)
 
+#define ISP_EVENT_SUBS_MASK_REG_UPDATE_MISSING \
+			(1 << ISP_EVENT_MASK_INDEX_REG_UPDATE_MISSING)
+
+#define ISP_EVENT_SUBS_MASK_PING_PONG_MISMATCH \
+			(1 << ISP_EVENT_MASK_INDEX_PING_PONG_MISMATCH)
+
+#define ISP_EVENT_SUBS_MASK_BUF_FATAL_ERROR \
+			(1 << ISP_EVENT_MASK_INDEX_BUF_FATAL_ERROR)
+
 enum msm_isp_event_idx {
 	ISP_REG_UPDATE        = 0,
 	ISP_EPOCH_0           = 1,
@@ -610,7 +631,8 @@ enum msm_isp_event_idx {
 	ISP_HW_FATAL_ERROR      = 11,
 	ISP_PING_PONG_MISMATCH = 12,
 	ISP_REG_UPDATE_MISSING = 13,
-	ISP_EVENT_MAX         = 14
+	ISP_BUF_FATAL_ERROR = 14,
+	ISP_EVENT_MAX         = 15
 };
 
 #define ISP_EVENT_OFFSET          8
@@ -638,6 +660,7 @@ enum msm_isp_event_idx {
 #define ISP_EVENT_HW_FATAL_ERROR  (ISP_EVENT_BASE + ISP_HW_FATAL_ERROR)
 #define ISP_EVENT_PING_PONG_MISMATCH (ISP_EVENT_BASE + ISP_PING_PONG_MISMATCH)
 #define ISP_EVENT_REG_UPDATE_MISSING (ISP_EVENT_BASE + ISP_REG_UPDATE_MISSING)
+#define ISP_EVENT_BUF_FATAL_ERROR (ISP_EVENT_BASE + ISP_BUF_FATAL_ERROR)
 #define ISP_EVENT_STREAM_UPDATE_DONE   (ISP_STREAM_EVENT_BASE)
 
 /* The msm_v4l2_event_data structure should match the
@@ -683,7 +706,7 @@ struct msm_isp_error_info {
 	enum msm_vfe_error_type err_type;
 	uint32_t session_id;
 	uint32_t stream_id;
-	uint8_t stream_id_mask;
+	uint32_t stream_id_mask;
 };
 
 /* This structure reports delta between master and slave */

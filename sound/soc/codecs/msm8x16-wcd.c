@@ -1903,6 +1903,13 @@ static int msm8x16_wcd_codec_enable_charge_pump(struct snd_soc_dapm_widget *w,
 					__func__, msm8x16_wcd->boost_option);
 				msm8x16_wcd_boost_mode_sequence(codec, EAR_PMD);
 			}
+			/*
+			 * Reset pa select bit from ear to hph after ear pa
+			 * is disabled and HPH DAC disable to reduce ear
+			 * turn off pop and avoid HPH pop in concurrency
+			 */
+			snd_soc_update_bits(codec,
+				MSM8X16_WCD_A_ANALOG_RX_EAR_CTL, 0x80, 0x00);
 		} else {
 			snd_soc_update_bits(codec,
 					MSM8X16_WCD_A_DIGITAL_CDC_DIG_CLK_CTL,
@@ -2944,9 +2951,8 @@ static const struct snd_kcontrol_new hphr_mux[] = {
 	SOC_DAPM_ENUM("HPHR", hph_enum)
 };
 
-static const struct snd_kcontrol_new spkr_switch[] = {
-	SOC_DAPM_SINGLE("Switch",
-		MSM8X16_WCD_A_ANALOG_SPKR_DAC_CTL, 7, 1, 0)
+static const struct snd_kcontrol_new spkr_mux[] = {
+	SOC_DAPM_ENUM("SPK", hph_enum)
 };
 
 static const char * const lo_text[] = {
@@ -3974,17 +3980,27 @@ static int msm8x16_wcd_lo_dac_event(struct snd_soc_dapm_widget *w,
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		snd_soc_update_bits(codec,
+			MSM8X16_WCD_A_DIGITAL_CDC_ANA_CLK_CTL, 0x10, 0x10);
+		snd_soc_update_bits(codec,
+			MSM8X16_WCD_A_ANALOG_RX_LO_EN_CTL, 0x20, 0x20);
+		snd_soc_update_bits(codec,
 			MSM8X16_WCD_A_ANALOG_RX_LO_EN_CTL, 0x80, 0x80);
 		snd_soc_update_bits(codec,
 			MSM8X16_WCD_A_ANALOG_RX_LO_DAC_CTL, 0x08, 0x08);
 		snd_soc_update_bits(codec,
 			MSM8X16_WCD_A_ANALOG_RX_LO_DAC_CTL, 0x40, 0x40);
+		snd_soc_update_bits(codec,
+			MSM8X16_WCD_A_ANALOG_RX_COM_BIAS_DAC, 0xff, 0x98);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		snd_soc_update_bits(codec,
 			MSM8X16_WCD_A_ANALOG_RX_LO_DAC_CTL, 0x80, 0x80);
 		snd_soc_update_bits(codec,
-			MSM8X16_WCD_A_ANALOG_RX_LO_DAC_CTL, 0x08, 0x08);
+			MSM8X16_WCD_A_ANALOG_RX_LO_DAC_CTL, 0x08, 0x00);
+		snd_soc_update_bits(codec,
+			MSM8X16_WCD_A_ANALOG_RX_LO_EN_CTL, 0x40, 0x40);
+		snd_soc_update_bits(codec,
+			MSM8X16_WCD_A_ANALOG_RX_COM_BIAS_DAC, 0xff, 0x98);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		usleep_range(20000, 20100);
@@ -3993,7 +4009,13 @@ static int msm8x16_wcd_lo_dac_event(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec,
 			MSM8X16_WCD_A_ANALOG_RX_LO_DAC_CTL, 0x40, 0x00);
 		snd_soc_update_bits(codec,
+			MSM8X16_WCD_A_ANALOG_RX_LO_DAC_CTL, 0x08, 0x00);
+		snd_soc_update_bits(codec,
 			MSM8X16_WCD_A_ANALOG_RX_LO_EN_CTL, 0x80, 0x00);
+		snd_soc_update_bits(codec,
+			MSM8X16_WCD_A_ANALOG_RX_LO_EN_CTL, 0x40, 0x00);
+		snd_soc_update_bits(codec,
+			MSM8X16_WCD_A_ANALOG_RX_LO_EN_CTL, 0x20, 0x00);
 		break;
 	}
 	return 0;
@@ -4170,11 +4192,18 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"SPK PA", NULL, "SPK_RX_BIAS"},
 	{"SPK PA", NULL, "SPK DAC"},
 	{"SPK DAC", "Switch", "RX3 CHAIN"},
+	{"SPK DAC", NULL, "VDD_SPKDRV"},
+
+	/* lineout */
+	{"LINEOUT", NULL, "LINEOUT PA"},
+	{"LINEOUT PA", NULL, "SPK_RX_BIAS"},
+	{"LINEOUT PA", NULL, "LINE_OUT"},
 	{"LINE_OUT", "Switch", "LINEOUT DAC"},
 	{"LINEOUT DAC", NULL, "RX3 CHAIN"},
-	{"LINEOUT PA", NULL, "LINEOUT DAC"},
-	{"LINEOUT", NULL, "LINEOUT PA"},
-	{"SPK DAC", NULL, "VDD_SPKDRV"},
+
+	/* lineout to WSA */
+	{"WSA_SPK_OUT", NULL, "WSA Spk Switch"},
+	{"WSA Spk Switch", "WSA", "LINEOUT PA"},
 
 	{"RX1 CHAIN", NULL, "RX1 CLK"},
 	{"RX2 CHAIN", NULL, "RX2 CLK"},
@@ -4589,6 +4618,26 @@ static int msm8x16_wcd_codec_enable_rx_chain(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+static int msm8x16_wcd_codec_enable_lo_pa(struct snd_soc_dapm_widget *w,
+				     struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+
+	dev_dbg(w->codec->dev, "%s: %d %s\n", __func__, event, w->name);
+	switch (event) {
+	case SND_SOC_DAPM_POST_PMU:
+		snd_soc_update_bits(codec,
+			MSM8X16_WCD_A_CDC_RX3_B6_CTL, 0x01, 0x00);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		snd_soc_update_bits(codec,
+			MSM8X16_WCD_A_CDC_RX3_B6_CTL, 0x01, 0x00);
+		break;
+	}
+
+	return 0;
+}
+
 static int msm8x16_wcd_codec_enable_spk_ext_pa(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event)
 {
@@ -4659,12 +4708,6 @@ static int msm8x16_wcd_codec_enable_ear_pa(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, MSM8X16_WCD_A_ANALOG_RX_EAR_CTL,
 			    0x40, 0x00);
 		usleep_range(7000, 7100);
-		/*
-		 * Reset pa select bit from ear to hph after ear pa
-		 * is disabled to reduce ear turn off pop
-		 */
-		snd_soc_update_bits(codec, MSM8X16_WCD_A_ANALOG_RX_EAR_CTL,
-			    0x80, 0x00);
 		if (get_codec_version(msm8x16_wcd) < CONGA)
 			snd_soc_update_bits(codec,
 			MSM8X16_WCD_A_ANALOG_RX_HPH_CNP_WG_TIME, 0xFF, 0x16);
@@ -4729,8 +4772,11 @@ static const struct snd_soc_dapm_widget msm8x16_wcd_dapm_widgets[] = {
 		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
 		SND_SOC_DAPM_POST_PMD),
 
-	SND_SOC_DAPM_MIXER("SPK DAC", SND_SOC_NOPM, 0, 0,
-		spkr_switch, ARRAY_SIZE(spkr_switch)),
+	SND_SOC_DAPM_MUX("SPK", SND_SOC_NOPM, 0, 0,
+		spkr_mux),
+
+	SND_SOC_DAPM_DAC("SPK DAC", NULL,
+		MSM8X16_WCD_A_ANALOG_SPKR_DAC_CTL, 7, 0),
 
 	SND_SOC_DAPM_MUX("LINE_OUT",
 		SND_SOC_NOPM, 0, 0, lo_mux),
@@ -4752,7 +4798,8 @@ static const struct snd_soc_dapm_widget msm8x16_wcd_dapm_widgets[] = {
 			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_PGA_E("LINEOUT PA", MSM8X16_WCD_A_ANALOG_RX_LO_EN_CTL,
-			4, 0 , NULL, 0, NULL, 0),
+			5, 0 , NULL, 0, msm8x16_wcd_codec_enable_lo_pa,
+			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_SUPPLY("VDD_SPKDRV", SND_SOC_NOPM, 0, 0,
 			    msm89xx_wcd_codec_enable_vdd_spkr,
@@ -5992,7 +6039,7 @@ static int __init msm8x16_wcd_codec_init(void)
 	spmi_driver_register(&wcd_spmi_driver);
 	return 0;
 }
-module_init(msm8x16_wcd_codec_init);
+late_initcall(msm8x16_wcd_codec_init);
 
 static void __exit msm8x16_wcd_codec_exit(void)
 {

@@ -790,6 +790,34 @@ static inline bool mdss_mdp_is_both_lm_valid(struct mdss_mdp_ctl *main_ctl)
 		main_ctl->mixer_right && main_ctl->mixer_right->valid_roi);
 }
 
+enum mdss_mdp_pu_type {
+	MDSS_MDP_INVALID_UPDATE = -1,
+	MDSS_MDP_DEFAULT_UPDATE,
+	MDSS_MDP_LEFT_ONLY_UPDATE,	/* only valid for split_lm */
+	MDSS_MDP_RIGHT_ONLY_UPDATE,	/* only valid for split_lm */
+};
+
+/* only call from master ctl */
+static inline enum mdss_mdp_pu_type mdss_mdp_get_pu_type(
+	struct mdss_mdp_ctl *mctl)
+{
+	enum mdss_mdp_pu_type pu_type = MDSS_MDP_INVALID_UPDATE;
+
+	if (!mctl || !mctl->is_master)
+		return pu_type;
+
+	if (!is_split_lm(mctl->mfd) || mdss_mdp_is_both_lm_valid(mctl))
+		pu_type = MDSS_MDP_DEFAULT_UPDATE;
+	else if (mctl->mixer_left->valid_roi)
+		pu_type = MDSS_MDP_LEFT_ONLY_UPDATE;
+	else if (mctl->mixer_right->valid_roi)
+		pu_type = MDSS_MDP_RIGHT_ONLY_UPDATE;
+	else
+		pr_err("%s: invalid pu_type\n", __func__);
+
+	return pu_type;
+}
+
 static inline struct mdss_mdp_ctl *mdss_mdp_get_split_ctl(
 	struct mdss_mdp_ctl *ctl)
 {
@@ -916,7 +944,13 @@ static inline bool mdss_mdp_req_init_restore_cfg(struct mdss_data_type *mdata)
 	    IS_MDSS_MAJOR_MINOR_SAME(mdata->mdp_rev,
 				MDSS_MDP_HW_REV_108) ||
 	    IS_MDSS_MAJOR_MINOR_SAME(mdata->mdp_rev,
-				MDSS_MDP_HW_REV_112))
+				MDSS_MDP_HW_REV_112) ||
+	    IS_MDSS_MAJOR_MINOR_SAME(mdata->mdp_rev,
+				MDSS_MDP_HW_REV_114) ||
+	    IS_MDSS_MAJOR_MINOR_SAME(mdata->mdp_rev,
+				MDSS_MDP_HW_REV_115) ||
+	    IS_MDSS_MAJOR_MINOR_SAME(mdata->mdp_rev,
+				MDSS_MDP_HW_REV_116))
 		return true;
 
 	return false;
@@ -939,7 +973,11 @@ static inline int mdss_mdp_panic_signal_support_mode(
 	else if (IS_MDSS_MAJOR_MINOR_SAME(mdata->mdp_rev,
 				MDSS_MDP_HW_REV_107) ||
 		IS_MDSS_MAJOR_MINOR_SAME(mdata->mdp_rev,
-				MDSS_MDP_HW_REV_114))
+				MDSS_MDP_HW_REV_114) ||
+		IS_MDSS_MAJOR_MINOR_SAME(mdata->mdp_rev,
+				MDSS_MDP_HW_REV_115) ||
+		IS_MDSS_MAJOR_MINOR_SAME(mdata->mdp_rev,
+				MDSS_MDP_HW_REV_116))
 		signal_mode = MDSS_MDP_PANIC_PER_PIPE_CFG;
 
 	return signal_mode;
@@ -1122,6 +1160,11 @@ static inline bool mdss_mdp_is_lm_swap_needed(struct mdss_data_type *mdata,
 		 (mctl->panel_data->panel_info.dsc_enc_total == 2))) &&
 	       (!mctl->mixer_left->valid_roi) &&
 	       (mctl->mixer_right->valid_roi);
+}
+
+static inline int mdss_mdp_get_display_id(struct mdss_mdp_pipe *pipe)
+{
+	return (pipe && pipe->mfd) ? pipe->mfd->index : -1;
 }
 
 irqreturn_t mdss_mdp_isr(int irq, void *ptr);

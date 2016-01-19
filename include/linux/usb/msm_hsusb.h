@@ -258,6 +258,8 @@ enum usb_id_state {
  *		mode with controller in device mode.
  * @bool disable_retention_with_vdd_min: Indicates whether to enable
 		allowing VDDmin without putting PHY into retention.
+ * @bool enable_phy_id_pullup: Indicates whether phy id pullup is
+		enabled or not.
  * @usb_id_gpio: Gpio used for USB ID detection.
  * @hub_reset_gpio: Gpio used for hub reset.
  * @switch_sel_gpio: Gpio used for controlling switch that
@@ -303,6 +305,7 @@ struct msm_otg_platform_data {
 	int vddmin_gpio;
 	bool enable_ahb2ahb_bypass;
 	bool disable_retention_with_vdd_min;
+	bool enable_phy_id_pullup;
 	int usb_id_gpio;
 	int hub_reset_gpio;
 	int switch_sel_gpio;
@@ -606,26 +609,6 @@ struct msm_usb_host_platform_data {
 	int pm_qos_latency;
 };
 
-/**
- * struct usb_ext_notification: event notification structure
- * @notify: pointer to client function to call when ID event is detected.
- *          The function parameter is provided by driver to be called back when
- *          external client indicates it is done using the USB. This function
- *          should return 0 if handled successfully, otherise an error code.
- * @ctxt: client-specific context pointer
- *
- * This structure should be used by clients wishing to register (via
- * msm_register_usb_ext_notification) for event notification whenever a USB
- * cable is plugged in and ID pin status changes. Clients must provide a
- * callback function pointer. If this callback returns 0, the USB driver will
- * assume the client is "taking over" the connection, and will relinquish any
- * further processing until its callback (passed via the third parameter) is
- * called with the online parameter set to false.
- */
-struct usb_ext_notification {
-	int (*notify)(void *, int, void (*)(void *, int online), void *);
-	void *ctxt;
-};
 #ifdef CONFIG_USB_BAM
 void msm_bam_set_usb_host_dev(struct device *dev);
 void msm_bam_set_hsic_host_dev(struct device *dev);
@@ -683,7 +666,6 @@ int msm_dwc3_reset_dbm_ep(struct usb_ep *ep);
 
 void msm_dwc3_restart_usb_session(struct usb_gadget *gadget);
 
-int msm_register_usb_ext_notification(struct usb_ext_notification *info);
 #else
 static inline int msm_data_fifo_config(struct usb_ep *ep, phys_addr_t addr,
 	u32 size, u8 dst_pipe_idx)
@@ -709,12 +691,6 @@ static inline void dwc3_tx_fifo_resize_request(
 static inline void msm_dwc3_restart_usb_session(struct usb_gadget *gadget)
 {
 	return;
-}
-
-static inline int msm_register_usb_ext_notification(
-					struct usb_ext_notification *info)
-{
-	return -ENODEV;
 }
 
 static inline bool msm_dwc3_reset_ep_after_lpm(struct usb_gadget *gadget)

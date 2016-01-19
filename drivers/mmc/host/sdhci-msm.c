@@ -1622,6 +1622,7 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 	int ice_clk_table_len;
 	u32 *ice_clk_table = NULL;
 	enum of_gpio_flags flags = OF_GPIO_ACTIVE_LOW;
+	const char *lower_bus_speed = NULL;
 
 	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
 	if (!pdata) {
@@ -1651,6 +1652,19 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 	else if (!msm_host->mmc->clk_scaling.freq_table ||
 			!msm_host->mmc->clk_scaling.freq_table_sz)
 			dev_err(dev, "bad dts clock scaling frequencies\n");
+
+	/*
+	 * Few hosts can support DDR52 mode at the same lower
+	 * system voltage corner as high-speed mode. In such cases,
+	 * it is always better to put it in DDR mode which will
+	 * improve the performance without any power impact.
+	 */
+	if (!of_property_read_string(np, "qcom,scaling-lower-bus-speed-mode",
+				&lower_bus_speed)) {
+		if (!strcmp(lower_bus_speed, "DDR52"))
+			msm_host->mmc->clk_scaling.lower_bus_speed_mode |=
+				MMC_SCALING_LOWER_DDR52_MODE;
+	}
 
 	if (sdhci_msm_dt_get_array(dev, "qcom,clk-rates",
 			&clk_table, &clk_table_len, 0)) {
@@ -2278,6 +2292,9 @@ static void sdhci_msm_cfg_sdiowakeup_gpio_irq(struct sdhci_host *host,
 static irqreturn_t sdhci_msm_sdiowakeup_irq(int irq, void *data)
 {
 	struct sdhci_host *host = (struct sdhci_host *)data;
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_msm_host *msm_host = pltfm_host->priv;
+
 	unsigned long flags;
 
 	pr_debug("%s: irq (%d) received\n", __func__, irq);
@@ -2285,6 +2302,7 @@ static irqreturn_t sdhci_msm_sdiowakeup_irq(int irq, void *data)
 	spin_lock_irqsave(&host->lock, flags);
 	sdhci_msm_cfg_sdiowakeup_gpio_irq(host, false);
 	spin_unlock_irqrestore(&host->lock, flags);
+	msm_host->sdio_pending_processing = true;
 
 	return IRQ_HANDLED;
 }
@@ -3002,10 +3020,13 @@ static void sdhci_msm_set_uhs_signaling(struct sdhci_host *host,
 
 #define MAX_TEST_BUS 60
 #define DRV_NAME "cmdq-host"
-static void sdhci_msm_cmdq_dump_debug_ram(struct sdhci_msm_host *msm_host)
+static void sdhci_msm_cmdq_dump_debug_ram(struct sdhci_host *host)
 {
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_msm_host *msm_host = pltfm_host->priv;
 	int i = 0;
-	struct cmdq_host *cq_host = mmc_cmdq_private(msm_host->mmc);
+	struct cmdq_host *cq_host = host->cq_host;
+
 	u32 version = readl_relaxed(msm_host->core_mem + CORE_MCI_VERSION);
 	u16 minor = version & CORE_VERSION_TARGET_MASK;
 	/* registers offset changed starting from 4.2.0 */
@@ -3036,7 +3057,7 @@ void sdhci_msm_dump_vendor_regs(struct sdhci_host *host)
 
 	pr_info("----------- VENDOR REGISTER DUMP -----------\n");
 	if (host->cq_host)
-		sdhci_msm_cmdq_dump_debug_ram(msm_host);
+		sdhci_msm_cmdq_dump_debug_ram(host);
 
 	pr_info("Data cnt: 0x%08x | Fifo cnt: 0x%08x | Int sts: 0x%08x\n",
 		readl_relaxed(msm_host->core_mem + CORE_MCI_DATA_CNT),
@@ -4265,9 +4286,9 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 
 	msm_host->pdata->sdiowakeup_irq = platform_get_irq_byname(pdev,
 							  "sdiowakeup_irq");
-	dev_info(&pdev->dev, "%s: sdiowakeup_irq = %d\n", __func__,
-			msm_host->pdata->sdiowakeup_irq);
 	if (sdhci_is_valid_gpio_wakeup_int(msm_host)) {
+		dev_info(&pdev->dev, "%s: sdiowakeup_irq = %d\n", __func__,
+				msm_host->pdata->sdiowakeup_irq);
 		msm_host->is_sdiowakeup_enabled = true;
 		ret = request_irq(msm_host->pdata->sdiowakeup_irq,
 				  sdhci_msm_sdiowakeup_irq,
@@ -4422,6 +4443,7 @@ static int sdhci_msm_cfg_sdio_wakeup(struct sdhci_host *host, bool enable)
 	if (enable) {
 		/* configure DAT1 gpio if applicable */
 		if (sdhci_is_valid_gpio_wakeup_int(msm_host)) {
+			msm_host->sdio_pending_processing = false;
 			ret = enable_irq_wake(msm_host->pdata->sdiowakeup_irq);
 			if (!ret)
 				sdhci_msm_cfg_sdiowakeup_gpio_irq(host, true);
@@ -4434,6 +4456,7 @@ static int sdhci_msm_cfg_sdio_wakeup(struct sdhci_host *host, bool enable)
 		if (sdhci_is_valid_gpio_wakeup_int(msm_host)) {
 			ret = disable_irq_wake(msm_host->pdata->sdiowakeup_irq);
 			sdhci_msm_cfg_sdiowakeup_gpio_irq(host, false);
+			msm_host->sdio_pending_processing = false;
 		} else {
 			pr_err("%s: sdiowakeup_irq(%d)invalid\n",
 					mmc_hostname(host->mmc), enable);
@@ -4601,6 +4624,10 @@ static int sdhci_msm_suspend_noirq(struct device *dev)
 			mmc_hostname(host->mmc), __func__);
 		ret = -EAGAIN;
 	}
+
+	if (host->mmc->card && mmc_card_sdio(host->mmc->card))
+		if (msm_host->sdio_pending_processing)
+			ret = -EBUSY;
 
 	return ret;
 }

@@ -510,6 +510,8 @@
 #define gpll6_src_val			2
 #define gpll6_main_gfx_src_val		3   /* gfx3d_clk_src */
 
+#define gpll6_main_div2_mock_src_val    2   /* usb30_mock_utmi_clk_src */
+
 #define gpll6_main_div2_src_val		5   /* mclk0_clk_src mclk1_clk_src
 					       mclk2_clk_src mclk3_clk_src */
 #define gpll6_main_div2_gfx_src_val	6   /* gfx3d_clk_src */
@@ -669,6 +671,7 @@ static DEFINE_VDD_REGS_INIT(vdd_gfx, 1);
 #define RF_CLK2_ID              0x5
 #define RF_CLK3_ID              0x8
 #define DIV_CLK1_ID             0xB
+#define DIV_CLK2_ID		0xC
 
 #endif
 

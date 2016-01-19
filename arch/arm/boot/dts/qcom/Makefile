@@ -89,34 +89,46 @@ dtb-$(CONFIG_ARCH_MDMCALIFORNIUM) += mdmcalifornium-sim.dtb \
 	mdmcalifornium-rumi.dtb \
 	mdmcalifornium-emmc-cdp.dtb \
 	mdmcalifornium-nand-cdp.dtb \
-	mdmcalifornium-mtp.dtb
+	mdmcalifornium-emmc-mtp.dtb \
+	mdmcalifornium-nand-mtp.dtb
 
 dtb-$(CONFIG_ARCH_MSM8937) += msm8937-rumi.dtb \
 	msm8937-pmi8950-cdp.dtb \
 	msm8937-pmi8937-cdp.dtb \
+	msm8937-pmi8950-ext-codec-cdp.dtb \
 	msm8937-pmi8950-mtp.dtb \
 	msm8937-pmi8937-mtp.dtb \
 	msm8937-pmi8950-rcm.dtb \
 	msm8937-pmi8937-rcm.dtb \
 	msm8937-pmi8950-qrd-sku1.dtb \
 	msm8937-pmi8937-qrd-sku2.dtb \
+	msm8937-pmi8950-qrd-sku1-dvt1.dtb \
+	msm8937-pmi8937-qrd-sku2-dvt1.dtb \
 	apq8037-pmi8950-cdp.dtb \
 	apq8037-pmi8937-cdp.dtb \
 	apq8037-pmi8950-mtp.dtb \
 	apq8037-pmi8937-mtp.dtb
 
 dtb-$(CONFIG_ARCH_MSMGOLD) += msmgold-rumi.dtb \
-	msmgold-cdp.dtb \
-	msmgold-mtp.dtb \
-	msmgold-rcm.dtb \
-	apqgold-cdp.dtb \
-	apqgold-mtp.dtb
+	apqgold-pmi8937-cdp.dtb \
+	apqgold-pmi8937-mtp.dtb \
+	apqgold-pmi8950-cdp.dtb \
+	apqgold-pmi8950-mtp.dtb \
+	msmgold-pmi8937-cdp.dtb \
+	msmgold-pmi8937-mtp.dtb \
+	msmgold-pmi8950-cdp.dtb \
+	msmgold-pmi8950-mtp.dtb \
+	msmgold-pmi8937-rcm.dtb \
+	msmgold-pmi8950-rcm.dtb
 
 dtb-$(CONFIG_ARCH_MSMTITANIUM) += msmtitanium-sim.dtb \
 	msmtitanium-rumi.dtb \
 	msmtitanium-cdp.dtb \
 	msmtitanium-mtp.dtb \
+	msmtitanium-ext-codec-mtp.dtb \
+	msmtitanium-qrd-sku3.dtb \
 	msmtitanium-rcm.dtb \
+	msmtitanium-ext-codec-rcm.dtb \
 	apqtitanium-cdp.dtb \
 	apqtitanium-mtp.dtb
 

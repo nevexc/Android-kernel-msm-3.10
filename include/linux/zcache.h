@@ -10,14 +10,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+#ifndef _LINUX_ZCACHE_H
+#define _LINUX_ZCACHE_H
 
-/dts-v1/;
+#ifdef CONFIG_ZCACHE
+extern u64 zcache_pages(void);
+#else
+u64 zcache_pages(void) { return 0; }
+#endif
 
-#include "apqgold.dtsi"
-#include "msmgold-mtp.dtsi"
-
-/ {
-	model = "Qualcomm Technologies, Inc. APQGOLD MTP";
-	compatible = "qcom,apqgold-mtp", "qcom,apqgold", "qcom,mtp";
-	qcom,board-id= <8 0>;
-};
+#endif /* _LINUX_ZCACHE_H */

@@ -277,10 +277,10 @@
 		qcom,speed4-bin-v0 =
 				<          0 0>,
 				<  806400000 2>,
-				<  998400000 2>,
-				< 1094400000 2>,
-				< 1190400000 2>,
-				< 1248000000 2>,
+				<  998400000 3>,
+				< 1094400000 4>,
+				< 1190400000 5>,
+				< 1248000000 6>,
 				< 1305600000 7>;
 		qcom,a7ssmux-opp-store-vcorner = <&CPU0>;
 		#clock-cells = <1>;
@@ -499,6 +499,9 @@
 
 	qcom,cnss-sdio {
 		compatible = "qcom,cnss_sdio";
+		reg = <0x87a00000 0x200000>;
+		reg-names = "ramdump";
+		subsys-name = "AR6320";
 		vdd-wlan-supply = <&rome_vreg>;
 		vdd-wlan-dsrc-supply = <&sdcard_ext_vreg>;
 		vdd-wlan-io-supply = <&mdm9607_l11>;
@@ -534,6 +537,7 @@
 		qcom,hsusb-otg-mpm-dpsehv-int = <49>;
 		qcom,hsusb-otg-mpm-dmsehv-int = <58>;
 		qcom,hsusb-otg-delay-lpm;
+		qcom,enable-phy-id-pullup;
 
 		qcom,msm-bus,name = "usb2";
 		qcom,msm-bus,num-cases = <3>;
@@ -711,6 +715,8 @@
 		qcom,sensors = <5>;
 		qcom,slope = <3000 3000 3000 3000 3000>;
 		qcom,sensor-id = <0 1 2 3 4>;
+		qcom,temp1-offset = <1 (-4) 4 (-3) (-4)>;
+		qcom,temp2-offset = <1 (-2) 8 (-5) (-4)>;
 	};
 
 	wcd9xxx_intc: wcd9xxx-irq {
@@ -1291,7 +1297,7 @@
 
 	emac0: qcom,emac@7c40000 {
 		cell-index = <0>;
-		compatible = "qcom,emac";
+		compatible = "qcom,mdm9607-emac";
 		reg-names = "emac", "emac_csr", "emac_1588", "emac_sgmii";
 		reg = <0x7c40000 0x10000>,
 			<0x7c56000 0x1000>,
@@ -1352,6 +1358,28 @@
 };
 
 &pm8019_vadc {
+	chan@6 {
+		label = "vbat_sns";
+		reg = <6>;
+		qcom,decimation = <0>;
+		qcom,pre-div-channel-scaling = <1>;
+		qcom,calibration-type = "absolute";
+		qcom,scale-function = <0>;
+		qcom,hw-settle-time = <0>;
+		qcom,fast-avg-setup = <0>;
+	};
+
+	chan@7 {
+		label = "vph_pwr";
+		reg = <7>;
+		qcom,decimation = <0>;
+		qcom,pre-div-channel-scaling = <1>;
+		qcom,calibration-type = "absolute";
+		qcom,scale-function = <0>;
+		qcom,hw-settle-time = <0>;
+		qcom,fast-avg-setup = <0>;
+	};
+
 	chan@31 {
 		label = "batt_id_therm";
 		reg = <0x31>;
