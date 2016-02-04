@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1129,12 +1129,6 @@ static int cpp_init_hardware(struct cpp_device *cpp_dev)
 		}
 	}
 
-	rc = msm_cpp_update_gdscr_status(cpp_dev, true);
-	if (rc < 0) {
-		pr_err("update cpp gdscr status failed\n");
-		goto req_irq_fail;
-	}
-
 	cpp_dev->hw_info.cpp_hw_version =
 		msm_camera_io_r(cpp_dev->cpp_hw_base);
 	if (cpp_dev->hw_info.cpp_hw_version == CPP_HW_VERSION_4_1_0) {
@@ -1195,22 +1189,30 @@ remap_failed:
 	msm_cam_clk_enable(&cpp_dev->pdev->dev, cpp_clk_info,
 		cpp_dev->cpp_clk, cpp_dev->num_clk, 0);
 clk_failed:
-	regulator_disable(cpp_dev->fs_cpp);
-	regulator_put(cpp_dev->fs_cpp);
+	if (cpp_dev->fs_cpp) {
+		regulator_disable(cpp_dev->fs_cpp);
+		regulator_put(cpp_dev->fs_cpp);
+		cpp_dev->fs_cpp = NULL;
+	}
 fs_failed:
-	regulator_disable(cpp_dev->fs_camss);
-	regulator_put(cpp_dev->fs_camss);
+	if (cpp_dev->fs_camss) {
+		regulator_disable(cpp_dev->fs_camss);
+		regulator_put(cpp_dev->fs_camss);
+		cpp_dev->fs_camss = NULL;
+	}
 fs_camss_failed:
-	regulator_disable(cpp_dev->fs_mmagic_camss);
-	regulator_put(cpp_dev->fs_mmagic_camss);
+	if (cpp_dev->fs_mmagic_camss) {
+		regulator_disable(cpp_dev->fs_mmagic_camss);
+		regulator_put(cpp_dev->fs_mmagic_camss);
+		cpp_dev->fs_mmagic_camss = NULL;
+	}
 fs_mmagic_failed:
 	if (cpp_dev->bus_master_flag)
 		msm_cpp_deinit_bandwidth_mgr(cpp_dev);
 	else
 		msm_isp_deinit_bandwidth_mgr(ISP_CPP);
 bus_scale_register_failed:
-	rc = cam_config_ahb_clk(CAM_AHB_CLIENT_CPP, CAMERA_AHB_SUSPEND_VOTE);
-	if (rc < 0)
+	if (cam_config_ahb_clk(CAM_AHB_CLIENT_CPP, CAMERA_AHB_SUSPEND_VOTE) < 0)
 		pr_err("%s: failed to remove vote for AHB\n", __func__);
 ahb_vote_fail:
 	return rc;
@@ -1375,6 +1377,10 @@ static int32_t cpp_load_fw(struct cpp_device *cpp_dev, char *fw_name_bin)
 		pr_err("%s:%d] poll command %x failed %d", __func__, __LINE__,
 			MSM_CPP_MSG_ID_JUMP_ACK, rc);
 	}
+
+	rc = msm_cpp_update_gdscr_status(cpp_dev, true);
+	if (rc < 0)
+		pr_err("update cpp gdscr status failed\n");
 
 end:
 	return rc;
@@ -2976,6 +2982,7 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 				pr_err("%s: load firmware failure %d\n",
 					__func__, rc);
 				enable_irq(cpp_dev->irq->start);
+				mutex_unlock(&cpp_dev->mutex);
 				return rc;
 			}
 			rc = msm_cpp_fw_version(cpp_dev);
@@ -2983,6 +2990,7 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 				pr_err("%s: get firmware failure %d\n",
 					__func__, rc);
 				enable_irq(cpp_dev->irq->start);
+				mutex_unlock(&cpp_dev->mutex);
 				return rc;
 			}
 			enable_irq(cpp_dev->irq->start);
@@ -3232,6 +3240,7 @@ STREAM_BUFF_END:
 			msm_cpp_core_clk_idx = get_clock_index("cpp_core_clk");
 			if (msm_cpp_core_clk_idx < 0) {
 				pr_err(" Fail to get clock index\n");
+				mutex_unlock(&cpp_dev->mutex);
 				return -EINVAL;
 			}
 			rc = msm_cpp_update_bandwidth_setting(cpp_dev,
@@ -3277,6 +3286,7 @@ STREAM_BUFF_END:
 
 		if (ioctl_ptr->len != sizeof(struct msm_pproc_queue_buf_info)) {
 			pr_err("%s: Not valid ioctl_ptr->len\n", __func__);
+			mutex_unlock(&cpp_dev->mutex);
 			return -EINVAL;
 		}
 		rc = msm_cpp_copy_from_ioctl_ptr(&queue_buf_info, ioctl_ptr);
@@ -4328,6 +4338,9 @@ static int cpp_probe(struct platform_device *pdev)
 	setup_timer(&cpp_timer.cpp_timer,
 		cpp_timer_callback, (unsigned long)&cpp_timer);
 	cpp_dev->fw_name_bin = NULL;
+	cpp_dev->fs_cpp = NULL;
+	cpp_dev->fs_camss = NULL;
+	cpp_dev->fs_mmagic_camss = NULL;
 	cpp_dev->max_timeout_trial_cnt = MSM_CPP_MAX_TIMEOUT_TRIAL;
 	if (rc == 0)
 		CPP_DBG("SUCCESS.");

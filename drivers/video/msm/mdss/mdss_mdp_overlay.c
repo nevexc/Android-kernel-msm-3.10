@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1311,7 +1311,6 @@ int mdss_mdp_overlay_start(struct msm_fb_data_type *mfd)
 {
 	int rc;
 	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
-	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	struct mdss_mdp_ctl *ctl = mdp5_data->ctl;
 
 	if (mdss_mdp_ctl_is_power_on(ctl)) {
@@ -1356,16 +1355,14 @@ int mdss_mdp_overlay_start(struct msm_fb_data_type *mfd)
 	 * This is not needed when continuous splash screen is enabled since
 	 * we would have called in to TZ to restore security configs from LK.
 	 */
-	if (!mdata->mdss_util->iommu_attached()) {
-		if (!mfd->panel_info->cont_splash_enabled) {
-			rc = mdss_iommu_ctrl(1);
-			if (IS_ERR_VALUE(rc)) {
-				pr_err("iommu attach failed rc=%d\n", rc);
-				goto end;
-			}
-			mdss_hw_init(mdss_res);
-			mdss_iommu_ctrl(0);
+	if (!mfd->panel_info->cont_splash_enabled) {
+		rc = mdss_iommu_ctrl(1);
+		if (IS_ERR_VALUE(rc)) {
+			pr_err("iommu attach failed rc=%d\n", rc);
+			goto end;
 		}
+		mdss_hw_init(mdss_res);
+		mdss_iommu_ctrl(0);
 	}
 
 	/* Restore any previously configured PP features by resetting the dirty
@@ -2065,7 +2062,6 @@ int mdss_mdp_overlay_release(struct msm_fb_data_type *mfd, int ndx)
 	struct mdss_mdp_pipe *pipe, *tmp;
 	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
 	u32 unset_ndx = 0;
-	int destroy_pipe;
 
 	mutex_lock(&mdp5_data->list_lock);
 	list_for_each_entry_safe(pipe, tmp, &mdp5_data->pipes_used, list) {
@@ -2079,22 +2075,9 @@ int mdss_mdp_overlay_release(struct msm_fb_data_type *mfd, int ndx)
 			unset_ndx |= pipe->ndx;
 
 			pipe->file = NULL;
-			destroy_pipe = pipe->play_cnt == 0;
-			if (!destroy_pipe)
-				list_move(&pipe->list,
-						&mdp5_data->pipes_cleanup);
-			else
-				list_del_init(&pipe->list);
+			list_move(&pipe->list, &mdp5_data->pipes_cleanup);
 
 			mdss_mdp_pipe_unmap(pipe);
-			if (destroy_pipe) {
-				mdss_mdp_mixer_pipe_unstage(pipe,
-					pipe->mixer_left);
-				mdss_mdp_mixer_pipe_unstage(pipe,
-					pipe->mixer_right);
-				pipe->mixer_stage = MDSS_MDP_STAGE_UNUSED;
-				__overlay_pipe_cleanup(mfd, pipe);
-			}
 
 			if (unset_ndx == ndx)
 				break;
