@@ -32,6 +32,7 @@
 
 #define VSYNC_DELAY msecs_to_jiffies(17)
 
+extern int power_3v3;
 DEFINE_LED_TRIGGER(bl_led_trigger);
 
 void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -307,6 +308,17 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 	pr_debug("%s: enable = %d\n", __func__, enable);
 
 	if (enable) {
+		rc = gpio_request(power_3v3, "disp_lcd_power");
+		if (rc) {
+			pr_err("request lcd power gpio failed, rc=%d\n",
+			rc);
+			return -ENODEV;
+		}
+		gpio_direction_output(power_3v3,1);
+		mdelay(50);
+		rc=gpio_get_value(power_3v3);
+		pr_err("%s: %d;lcd_power_en_value=%d\n", __func__,__LINE__,rc);
+		gpio_free(power_3v3);
 		rc = mdss_dsi_request_gpios(ctrl_pdata);
 		if (rc) {
 			pr_err("gpio request failed\n");
@@ -352,6 +364,18 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 		gpio_free(ctrl_pdata->rst_gpio);
 		if (gpio_is_valid(ctrl_pdata->mode_gpio))
 			gpio_free(ctrl_pdata->mode_gpio);
+		rc = gpio_request(power_3v3, "disp_lcd_power");
+		if (rc) {
+		pr_err("request lcd power gpio failed, rc=%d\n",
+		rc);
+		return -ENODEV;
+		}
+		gpio_direction_output(power_3v3,0);
+		//increase the delay time to avoid lcd init fail.
+		mdelay(500);
+		rc=gpio_get_value(power_3v3);
+		pr_err("%s: %d;lcd_power_en_value=%d\n", __func__,__LINE__,rc);
+		gpio_free(power_3v3);
 	}
 	return rc;
 }

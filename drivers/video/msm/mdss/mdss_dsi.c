@@ -45,6 +45,7 @@ static struct mdss_dsi_data *mdss_dsi_res;
 
 static struct pm_qos_request mdss_dsi_pm_qos_request;
 
+int power_3v3=-1;
 static void mdss_dsi_pm_qos_add_request(void)
 {
 	pr_debug("%s: add request", __func__);
@@ -3792,6 +3793,10 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 		pr_err("%s:%d, reset gpio not specified\n",
 						__func__, __LINE__);
 
+	power_3v3 = of_get_named_gpio(ctrl_pdev->dev.of_node,"qcom,platform-power-3v3-gpio", 0);
+	if (!gpio_is_valid(power_3v3))
+		pr_err("%s:%d, power_3v3 gpio not specified\n",
+						__func__, __LINE__);
 	if (pinfo->mode_gpio_state != MODE_GPIO_NOT_VALID) {
 
 		ctrl_pdata->mode_gpio = of_get_named_gpio(
