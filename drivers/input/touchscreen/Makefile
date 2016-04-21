@@ -90,3 +90,5 @@ obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)		+= synaptics_i2c_rmi4.o
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_RMI4_DEV)	+= synaptics_rmi_dev.o
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE) 	+= synaptics_fw_update.o
 obj-$(CONFIG_TOUCHSCREEN_GT9XX)		+= gt9xx/
+obj-$(CONFIG_TOUCHSCREEN_FTS_FT5626) += pop4_10_4g_vdf/ft5626/
+obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_S7060B) += pop4_10_4g_vdf/synaptics_s7060b/

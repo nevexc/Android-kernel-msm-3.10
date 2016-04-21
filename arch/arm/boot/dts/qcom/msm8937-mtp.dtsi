@@ -103,6 +103,72 @@
 	};
 };
 
+&i2c_3 {
+	status = "ok";
+
+
+	focaltech@38{
+	    compatible = "focaltech,fts";
+	    reg = <0x38>;
+	    interrupt-parent = <&tlmm>;
+	    interrupts = <65 0x2>;
+	    vdd-supply = <&pm8937_l10>;
+	    vcc_i2c-supply = <&pm8937_l5>;
+	    /* pins used by touchscreen */
+	    pinctrl-names = "pmx_ts_active","pmx_ts_suspend";
+	    pinctrl-0 = <&ts_int_active &ts_reset_active>;
+	    pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+	    focaltech,name = "ft5626";
+	    focaltech,family-id = <0x58>;
+	    focaltech,reset-gpio = <&tlmm 64 0x00>;
+	    focaltech,irq-gpio = <&tlmm 65 0x02>;
+	    focaltech,display-coords = <0 0 1200 1920>;
+	    focaltech,panel-coords = <0 0 1200 1920>;
+	    //focaltech,button-map= <139 102 158>;
+	    focaltech,no-force-update;
+	    focaltech,i2c-pull-up;
+	    focaltech,group-id = <1>;
+	    focaltech,hard-reset-delay-ms = <20>;
+	    focaltech,soft-reset-delay-ms = <150>;
+	    focaltech,num-max-touches = <10>;
+	    //focaltech,fw-name = "ft_8610_qrd_fw.bin";
+	    focaltech,fw-delay-aa-ms = <100>;
+	    focaltech,fw-delay-55-ms = <30>;
+	    focaltech,fw-upgrade-id1 = <0x79>;
+	    focaltech,fw-upgrade-id2 = <0x08>;
+	    focaltech,fw-delay-readid-ms = <10>;
+	    focaltech,fw-delay-era-flsh-ms = <2000>;
+	    //focaltech,fw-auto-cal;
+	    focaltech,ignore-id-check;
+	};
+
+	synaptics@20 {
+		    compatible = "synaptics,dsx-i2c";
+		    reg = <0x20>;
+		    interrupt-parent = <&tlmm>;
+		    interrupts = <65 0x2>;
+		    vdd-supply = <&pm8937_l10>;
+		    vcc_i2c-supply = <&pm8937_l5>;
+		    synaptics,pwr-reg-name = "avdd";
+		    synaptics,bus-reg-name = "vdd";
+		    /* pins used by touchscreen */
+		    pinctrl-names = "pmx_ts_active","pmx_ts_suspend";
+		    pinctrl-0 = <&ts_int_active &ts_reset_active>;
+		    pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		    /*synaptics,fw-name = "PR1812284.img";*/
+		    synaptics,irq-gpio = <&tlmm 65 0x2008>;
+		    synaptics,reset-gpio = <&tlmm 64 0x00>;
+		    synaptics,irq-on-state = <0>;
+		    synaptics,power-delay-ms = <200>;
+		    synaptics,reset-delay-ms = <200>;
+		    synaptics,reset-on-state = <0>;
+		    synaptics,reset-active-ms = <20>;
+		    /*synaptics,disable-gpios;*/
+		    /*synaptics,display-coords = <0 0 599 1023>;*/
+		    /*synaptics,panel-coords = <0 0 599 1023>;*/
+		    synaptics,cap-button-codes = <158 172 580>;
+		};
+};
 &i2c_5 { /* BLSP2 QUP1 */
 	nq@28 {
 		compatible = "qcom,nq-nci";
