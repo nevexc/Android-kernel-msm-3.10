@@ -520,6 +520,49 @@
 			};
 		};
 
+		iqs128_int_pin {
+			iqs128_int_active: default {
+				mux {
+					pins = "gpio43";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio43";
+					drive-strength = <2>;
+					bias-pull-up;
+				};
+			};
+
+			iqs128_int_deactive: sleep {
+				mux {
+					pins = "gpio43";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio43";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+		};
+
+		hall_int_pin {
+			hall_default:hall_default {
+				mux {
+					pins = "gpio97";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio97";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+		};
+
 		/* add pingrp for touchscreen */
 		pmx_ts_int_active {
 			ts_int_active: ts_int_active {
@@ -561,7 +604,7 @@
 				config {
 					pins = "gpio64";
 					drive-strength = <8>;
-					bias-pull-up;
+					bias-disable;
 				};
 			};
 		};
@@ -576,7 +619,7 @@
 				config {
 					pins = "gpio64";
 					drive-strength = <2>;
-					bias-pull-down;
+					bias-disable;
 				};
 			};
 		};

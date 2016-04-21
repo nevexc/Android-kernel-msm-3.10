@@ -28,6 +28,17 @@
 };
 
 &soc {
+	hall:qcom,hall {
+		cell-index = <0>;
+		compatible = "qcom,hall";
+		interrupt-parent = <&tlmm>;
+		interrupts = <97 0x2>;
+		interrupt-gpios = <&tlmm 97 0x00>;
+		vdd-supply = <&pm8937_l6>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&hall_default>;
+	};
+
 	gpio_keys {
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
@@ -186,6 +197,28 @@
 		pinctrl-1 = <&nfc_int_suspend &nfc_disable_suspend>;
 		clocks = <&clock_gcc clk_bb_clk2_pin>;
 		clock-names = "ref_clk";
+	};
+
+	adux1050@2c {
+	compatible = "adi,adux1050";
+	reg = <0x2c>;
+	interrupt-parent = <&tlmm>;
+	interrupts = <43 0x2>;
+	interrupt-gpios = <&tlmm 43 0x00>;
+	interrupts-name = "adux1050_2c";
+	/*vdd-supply = <&pm8937_l10>;*/
+	vio-supply = <&pm8937_l6>;
+	enable-gpios = <&tlmm 47 0x00>;
+	adi,adux1050_reg = [00010242 00020538 000301EE 00050F77 00061908 000700d0 00080096 00090000 000a0003 00798000];
+	/*Signifies the required Baseline for the device*/
+	adi,adux1050_stg0_base = [ 00010000 ];
+	adi,adux1050_stg1_base = [ 00020000 ];
+	adi,adux1050_stg2_base = [ 00030000 ];
+	adi,adux1050_stg3_base = [ 00040000 ];
+	adi,adux1050_irq_flags = [ 00000002 ];  /* Signifies the irq Flag, If not set it will be set to IRQF_TRIGGER_FALLING*/
+	pinctrl-names = "iqs128_int_active", "iqs128_int_deactive";
+	pinctrl-0 = <&iqs128_int_active>;
+	pinctrl-1 = <&iqs128_int_deactive>;
 	};
 };
 

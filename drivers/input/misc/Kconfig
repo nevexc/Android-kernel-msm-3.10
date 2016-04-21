@@ -746,6 +746,22 @@ config INPUT_DRV2667_HAPTICS
 	  To compile this driver as a module, choose M here: the
 	  module will be called drv260x-haptics.
 
+config INPUT_PSENSOR
+   tristate "P-sensor"
+   help
+     Say Y here to enable support for the P-sensor
+
+     To compile this driver as a module, choose M here: the module will
+     be called P-sensor.
+
+config SENSORS_HALL
+   tristate "Hall Sensor"
+   help
+     Say Y here to enable support for the Hall sensor
+
+     To compile this driver as a module, choose M here: the module will
+     be called hall_sensor.
+
 config TCT_COMMON
     tristate "Support tct common debug interface"
     default n
