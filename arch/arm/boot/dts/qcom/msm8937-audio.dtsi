@@ -14,13 +14,13 @@
 #include "msm8937-wsa881x.dtsi"
 
 &int_codec {
-	qcom,model = "msm8952-snd-card-mtp";
+	/*qcom,model = "msm8952-snd-card-mtp";
 
 	qcom,cdc-us-euro-gpios = <&tlmm 63 0>;
 	qcom,msm-mbhc-hphl-swh = <0>;
 	qcom,msm-mbhc-gnd-swh = <0>;
 	qcom,msm-hs-micbias-type = "external";
-	qcom,msm-micbias1-ext-cap;
+	qcom,msm-micbias1-ext-cap;*/
 
 	qcom,hdmi-dba-codec-rx;
 
@@ -174,6 +174,9 @@
 
 		qcom,cdc-on-demand-supplies = "cdc-vdd-mic-bias";
 		qcom,dig-cdc-base-addr = <0xc0f0000>;
+		/*speaker function and switch function.*/
+		qcom,platform-power-speaker-pa-gpio = <&tlmm 50 0>;
+		qcom,platform-audio-switch-gpio = <&tlmm 68 0>;
 	};
 
 	pm8937_cajon_analog: 8952_wcd_codec@f100 {

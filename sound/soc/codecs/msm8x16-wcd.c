@@ -84,6 +84,11 @@
 #define HPHR_PA_DISABLE (0x01 << 2)
 #define EAR_PA_DISABLE (0x01 << 3)
 #define SPKR_PA_DISABLE (0x01 << 4)
+int power_speaker_pa=-1;
+int speaker_hp_sync_flag;
+int audio_switch_gpio;
+int msm8x16_wcd_audio_switch_to_speaker(void);
+int msm8x16_wcd_audio_switch_to_headset(void);
 
 enum {
 	BOOST_SWITCH = 0,
@@ -1704,6 +1709,84 @@ static void msm8x16_wcd_dt_parse_micbias_info(struct device *dev,
 	}
 }
 
+int msm8x16_wcd_audio_switch_to_speaker(void)
+{
+	int err;
+	int gpio_state;
+
+	err = gpio_request(audio_switch_gpio, "audio_gpio_switch");
+	if (err)
+	{
+		pr_err("%s: request aduio switch gpio failed!\n", __func__);
+		return -1;
+	}
+	gpio_direction_output(audio_switch_gpio, 1);
+	udelay(2);
+	gpio_state = gpio_get_value(audio_switch_gpio);
+	printk(KERN_CRIT"%s: audio switch gpio state is %d!\n", __func__, gpio_state);
+	gpio_free(audio_switch_gpio);
+	speaker_hp_sync_flag = 0;
+
+	printk(KERN_CRIT"%s: switch to speaker\n", __func__);
+	return 0;
+}
+
+int msm8x16_wcd_audio_switch_to_headset(void)
+{
+	int err;
+	int gpio_state;
+
+        err = gpio_request(audio_switch_gpio, "audio_gpio_switch");
+        if (err)
+        {
+                pr_err("%s: request aduio switch gpio failed!\n", __func__);
+                return -1;
+        }
+        gpio_direction_output(audio_switch_gpio, 0);
+        udelay(2);
+	gpio_state = gpio_get_value(audio_switch_gpio);
+        printk(KERN_CRIT"%s: audio switch gpio state is %d!\n", __func__, gpio_state);
+	gpio_free(audio_switch_gpio);
+	speaker_hp_sync_flag = 1;
+
+	printk(KERN_CRIT"%s: switch to headset\n", __func__);
+        return 0;
+}
+
+static int msm8x16_wcd_audio_switch_put(struct snd_kcontrol *kcontrol,
+                        struct snd_ctl_elem_value *ucontrol)
+{
+        struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+
+        dev_dbg(codec->dev, "%s: ucontrol->value.integer.value[0] = %ld\n",
+                __func__, ucontrol->value.integer.value[0]);
+
+        switch (ucontrol->value.integer.value[0])
+        {
+                case 0:
+                        msm8x16_wcd_audio_switch_to_speaker();
+                        break;
+                case 1:
+                        msm8x16_wcd_audio_switch_to_headset();
+                default:
+                        return -EINVAL;
+        }
+
+        return 0;
+}
+
+static int msm8x16_wcd_audio_switch_get(struct snd_kcontrol *kcontrol,
+                        struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+
+static const char* const msm8x16_wcd_audio_switch_text[] = {
+        "SPEAKER", "HEADSET"};
+
+static const struct soc_enum msm8x16_wcd_audio_switch_enum[] = {
+        SOC_ENUM_SINGLE_EXT(2, msm8x16_wcd_audio_switch_text),
+};
 static struct msm8x16_wcd_pdata *msm8x16_wcd_populate_dt_pdata(
 						struct device *dev)
 {
@@ -1725,6 +1808,22 @@ static struct msm8x16_wcd_pdata *msm8x16_wcd_populate_dt_pdata(
 		ret = -EINVAL;
 		goto err;
 	}
+		power_speaker_pa = of_get_named_gpio(dev->of_node,"qcom,platform-power-speaker-pa-gpio", 0);
+		if (!gpio_is_valid(power_speaker_pa))
+			pr_err("%s:%d, power_speaker_pa gpio not specified\n",
+							__func__, __LINE__);
+		else
+			pr_err("%s:%d, power_speaker_pa gpio  is ok\n",
+							__func__, __LINE__);
+
+		audio_switch_gpio = of_get_named_gpio(dev->of_node, "qcom,platform-audio-switch-gpio", 0);
+		if (!gpio_is_valid(audio_switch_gpio))
+			pr_err("%s:%d, audio switch gpio not specified!\n", __func__, __LINE__);
+		else
+		{
+			pr_err("%s:%d, audio switch gpio is ok!\n", __func__, __LINE__);
+		}
+		msm8x16_wcd_audio_switch_to_speaker();
 
 	/* On-demand supply list is an optional property */
 	ond_cnt = of_property_count_strings(dev->of_node, ond_prop_name);
@@ -2434,6 +2533,8 @@ static const struct snd_kcontrol_new msm8x16_wcd_snd_controls[] = {
 	SOC_ENUM_EXT("LOOPBACK Mode", msm8x16_wcd_loopback_mode_ctl_enum[0],
 		msm8x16_wcd_loopback_mode_get, msm8x16_wcd_loopback_mode_put),
 
+	SOC_ENUM_EXT("Audio Switch", msm8x16_wcd_audio_switch_enum[0],
+		msm8x16_wcd_audio_switch_get, msm8x16_wcd_audio_switch_put),
 	SOC_SINGLE_TLV("ADC1 Volume", MSM8X16_WCD_A_ANALOG_TX_1_EN, 3,
 					8, 0, analog_gain),
 	SOC_SINGLE_TLV("ADC2 Volume", MSM8X16_WCD_A_ANALOG_TX_2_EN, 3,
@@ -3418,7 +3519,8 @@ static int msm8x16_wcd_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 		if (get_codec_version(msm8x16_wcd) <= TOMBAK_2_0)
 			usleep_range(20000, 20100);
 		if (strnstr(w->name, internal1_text, strlen(w->name))) {
-			snd_soc_update_bits(codec, micb_int_reg, 0x40, 0x40);
+			//snd_soc_update_bits(codec, micb_int_reg, 0x40, 0x40);
+			snd_soc_update_bits(codec, micb_int_reg, 0x40, 0x00);
 		} else if (strnstr(w->name, internal2_text,  strlen(w->name))) {
 			snd_soc_update_bits(codec, micb_int_reg, 0x08, 0x08);
 			msm8x16_notifier_call(codec,
@@ -3908,6 +4010,7 @@ static int msm8x16_wcd_hphl_dac_event(struct snd_soc_dapm_widget *w,
 	struct snd_soc_codec *codec = w->codec;
 	struct msm8x16_wcd_priv *msm8x16_wcd = snd_soc_codec_get_drvdata(codec);
 	int ret;
+	int rr=-1;
 
 	dev_dbg(codec->dev, "%s %s %d\n", __func__, w->name, event);
 	ret = wcd_mbhc_get_impedance(&msm8x16_wcd->mbhc,
@@ -3934,6 +4037,40 @@ static int msm8x16_wcd_hphl_dac_event(struct snd_soc_dapm_widget *w,
 				0x08, 0x00);
 		snd_soc_update_bits(codec,
 			MSM8X16_WCD_A_ANALOG_RX_HPH_L_PA_DAC_CTL, 0x02, 0x02);
+		if(speaker_hp_sync_flag==0){
+			rr=gpio_request(power_speaker_pa,"power_speaker_pa");
+			if(rr)
+			{
+				pr_err("request power speaker pa gpio err\n");
+				return -1;
+			}
+			gpio_direction_output(power_speaker_pa,0);
+			udelay(2);
+			gpio_direction_output(power_speaker_pa,1);
+			udelay(2);
+			gpio_direction_output(power_speaker_pa,0);
+			udelay(2);
+			gpio_direction_output(power_speaker_pa,1);
+			udelay(2);
+			gpio_direction_output(power_speaker_pa,0);
+			udelay(2);
+			gpio_direction_output(power_speaker_pa,1);
+			rr=gpio_get_value(power_speaker_pa);
+			pr_err("%s,rr=%d\n",__func__,rr);
+			gpio_free(power_speaker_pa);
+		}
+		else if(speaker_hp_sync_flag==1){
+			rr=gpio_request(power_speaker_pa,"power_speaker_pa");
+			if(rr)
+			{
+				pr_err("request power speaker pa gpio err\n");
+				return -1;
+			}
+			gpio_direction_output(power_speaker_pa,0);
+			rr=gpio_get_value(power_speaker_pa);
+			pr_err("%s,rr=%d\n",__func__,rr);
+			gpio_free(power_speaker_pa);
+		}
 		snd_soc_update_bits(codec,
 			MSM8X16_WCD_A_DIGITAL_CDC_DIG_CLK_CTL, 0x01, 0x01);
 		snd_soc_update_bits(codec,
@@ -4047,6 +4184,7 @@ static int msm8x16_wcd_hph_pa_event(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = w->codec;
 	struct msm8x16_wcd_priv *msm8x16_wcd = snd_soc_codec_get_drvdata(codec);
+	int rr=-1;
 
 	dev_dbg(codec->dev, "%s: %s event = %d\n", __func__, w->name, event);
 
@@ -4118,6 +4256,16 @@ static int msm8x16_wcd_hph_pa_event(struct snd_soc_dapm_widget *w,
 		usleep_range(4000, 4100);
 		usleep_range(CODEC_DELAY_1_MS, CODEC_DELAY_1_1_MS);
 
+		rr=gpio_request(power_speaker_pa,"power_speaker_pa");
+		if(rr)
+		{
+			pr_err("request power speaker pa gpio err\n");
+			return -1;
+		}
+		gpio_direction_output(power_speaker_pa,0);
+		rr=gpio_get_value(power_speaker_pa);
+		pr_err("%s,rr=%d\n",__func__,rr);
+		gpio_free(power_speaker_pa);
 		dev_dbg(codec->dev,
 			"%s: sleep 10 ms after %s PA disable.\n", __func__,
 			w->name);
